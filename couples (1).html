@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Juntos · Together">
+<meta name="theme-color" content="#FAF6F0">
+<title>Juntos · Together</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --clay: #C4956A;
+    --clay-light: #E8C9A8;
+    --clay-dark: #8B6347;
+    --slate: #6B7F8B;
+    --slate-dark: #3D5260;
+    --cream: #FAF6F0;
+    --warm-white: #FDF9F4;
+    --sand: #EDE0D0;
+    --deep: #2C1F14;
+    --muted: #9B8575;
+    --together: #8B7355;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    background: var(--cream);
+    font-family: 'DM Sans', sans-serif;
+    color: var(--deep);
+    height: 100dvh;
+    display: flex; flex-direction: column;
+    overflow: hidden; position: fixed; width: 100%;
+  }
+
+  body::before {
+    content: ''; position: fixed; top: -40%; right: -20%;
+    width: 600px; height: 600px;
+    background: radial-gradient(circle, rgba(196,149,106,0.08) 0%, transparent 50%),
+                radial-gradient(circle at 30% 70%, rgba(107,127,139,0.08) 0%, transparent 50%);
+    pointer-events: none; z-index: 0;
+  }
+
+  .header {
+    padding: max(env(safe-area-inset-top), 12px) 20px 12px;
+    display: flex; align-items: center; justify-content: space-between;
+    background: rgba(250,246,240,0.97); backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(196,149,106,0.15);
+    position: relative; z-index: 10; flex-shrink: 0;
+  }
+
+  .logo-area { display: flex; align-items: center; gap: 10px; }
+
+  .logo-mark {
+    width: 34px; height: 34px;
+    background: linear-gradient(135deg, var(--clay) 0%, var(--slate-dark) 100%);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 2px 10px rgba(139,115,85,0.3); flex-shrink: 0;
+  }
+
+  .logo-mark svg { width: 16px; height: 16px; fill: white; }
+
+  .logo-text {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 20px; font-weight: 300;
+    letter-spacing: 0.04em; color: var(--deep);
+  }
+
+  .logo-text span { color: var(--together); font-style: italic; }
+
+  .header-right {
+    font-size: 11px; font-weight: 500;
+    letter-spacing: 0.07em; text-transform: uppercase;
+    color: var(--muted); background: var(--sand);
+    padding: 4px 10px; border-radius: 20px;
+  }
+
+  /* Who's here selector */
+  .who-bar {
+    padding: 10px 16px;
+    background: rgba(250,246,240,0.9);
+    border-bottom: 1px solid rgba(196,149,106,0.12);
+    display: flex; gap: 8px; align-items: center; flex-shrink: 0;
+  }
+
+  .who-label { font-size: 11px; color: var(--muted); letter-spacing: 0.04em; margin-right: 2px; }
+
+  .who-btn {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 11px; font-weight: 500; letter-spacing: 0.05em;
+    padding: 5px 12px; border-radius: 20px;
+    border: 1.5px solid transparent; cursor: pointer;
+    transition: all 0.2s ease; background: transparent; color: var(--muted);
+    -webkit-appearance: none;
+  }
+
+  .who-btn.active-frida { background: var(--clay); color: white; border-color: var(--clay); }
+  .who-btn.active-doug { background: var(--slate); color: white; border-color: var(--slate); }
+  .who-btn.active-both {
+    background: linear-gradient(135deg, var(--clay) 0%, var(--slate-dark) 100%);
+    color: white; border-color: transparent;
+  }
+
+  .who-btn:not(.active-frida):not(.active-doug):not(.active-both):hover {
+    border-color: var(--clay-light); color: var(--together);
+  }
+
+  .chat-area {
+    flex: 1; overflow-y: auto; padding: 20px 16px;
+    display: flex; flex-direction: column; gap: 16px;
+    -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
+  }
+
+  .chat-area::-webkit-scrollbar { display: none; }
+
+  .date-divider {
+    display: flex; align-items: center; gap: 10px; margin: 4px 0;
+  }
+
+  .date-divider::before, .date-divider::after {
+    content: ''; flex: 1; height: 1px;
+    background: linear-gradient(90deg, rgba(196,149,106,0.2), rgba(107,127,139,0.2));
+  }
+
+  .date-divider span {
+    font-size: 10px; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--muted); font-weight: 500;
+  }
+
+  .message {
+    display: flex; flex-direction: column; max-width: 88%;
+    animation: msgIn 0.35s cubic-bezier(0.34, 1.4, 0.64, 1) forwards;
+    opacity: 0; transform: translateY(10px);
+  }
+
+  @keyframes msgIn { to { opacity: 1; transform: translateY(0); } }
+
+  .message.agent { align-self: flex-start; }
+  .message.frida { align-self: flex-end; }
+  .message.doug { align-self: flex-end; }
+
+  .msg-label {
+    font-size: 10px; letter-spacing: 0.08em;
+    text-transform: uppercase; font-weight: 500;
+    margin-bottom: 5px; padding: 0 3px;
+  }
+
+  .message.agent .msg-label { color: var(--together); }
+  .message.frida .msg-label { color: var(--clay); text-align: right; }
+  .message.doug .msg-label { color: var(--slate); text-align: right; }
+
+  .bubble {
+    padding: 12px 16px; border-radius: 18px;
+    line-height: 1.65; font-size: 14px; font-weight: 300;
+  }
+
+  .message.agent .bubble {
+    background: white; color: var(--deep);
+    border-bottom-left-radius: 4px;
+    box-shadow: 0 2px 12px rgba(44,31,20,0.07);
+    border: 1px solid rgba(196,149,106,0.12);
+  }
+
+  .message.frida .bubble {
+    background: linear-gradient(135deg, var(--clay) 0%, var(--clay-dark) 100%);
+    color: white; border-bottom-right-radius: 4px;
+    box-shadow: 0 2px 12px rgba(196,149,106,0.25);
+  }
+
+  .message.doug .bubble {
+    background: linear-gradient(135deg, var(--slate) 0%, var(--slate-dark) 100%);
+    color: white; border-bottom-right-radius: 4px;
+    box-shadow: 0 2px 12px rgba(107,127,139,0.25);
+  }
+
+  /* Speaker toggle for input */
+  .speaker-toggle {
+    display: flex; gap: 6px; margin-bottom: 8px;
+  }
+
+  .speaker-btn {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 11px; font-weight: 500;
+    padding: 4px 12px; border-radius: 20px;
+    border: 1.5px solid rgba(196,149,106,0.25);
+    cursor: pointer; transition: all 0.2s ease;
+    background: transparent; color: var(--muted);
+    -webkit-appearance: none;
+  }
+
+  .speaker-btn.active-frida { background: var(--clay); color: white; border-color: var(--clay); }
+  .speaker-btn.active-doug { background: var(--slate); color: white; border-color: var(--slate); }
+
+  .typing-wrap {
+    display: flex; align-self: flex-start;
+    animation: msgIn 0.3s ease forwards; opacity: 0;
+  }
+
+  .typing-dots {
+    background: white; border: 1px solid rgba(196,149,106,0.15);
+    box-shadow: 0 2px 10px rgba(44,31,20,0.06);
+    padding: 12px 16px; border-radius: 18px; border-bottom-left-radius: 4px;
+    display: flex; gap: 5px; align-items: center;
+  }
+
+  .typing-dots span {
+    width: 6px; height: 6px; background: var(--clay-light); border-radius: 50%;
+    animation: bounce 1.2s infinite;
+  }
+
+  .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+  .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+  @keyframes bounce {
+    0%, 60%, 100% { transform: translateY(0); background: var(--clay-light); }
+    30% { transform: translateY(-5px); background: var(--clay); }
+  }
+
+  .suggestions {
+    display: flex; flex-wrap: wrap; gap: 7px;
+    padding: 2px 0 6px;
+    animation: msgIn 0.4s ease 0.15s forwards; opacity: 0;
+  }
+
+  .chip {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px; color: var(--together);
+    background: rgba(139,115,85,0.08);
+    border: 1px solid rgba(139,115,85,0.22);
+    padding: 6px 13px; border-radius: 20px;
+    cursor: pointer; -webkit-appearance: none;
+  }
+
+  .chip:active { transform: scale(0.97); }
+
+  .input-area {
+    padding: 12px 16px;
+    padding-bottom: max(env(safe-area-inset-bottom), 12px);
+    background: rgba(250,246,240,0.97); backdrop-filter: blur(10px);
+    border-top: 1px solid rgba(196,149,106,0.12); flex-shrink: 0;
+  }
+
+  .input-wrap {
+    display: flex; align-items: flex-end; gap: 8px;
+    background: white; border-radius: 24px; padding: 8px 8px 8px 16px;
+    box-shadow: 0 2px 12px rgba(44,31,20,0.05);
+    transition: border-color 0.2s ease;
+    border: 1.5px solid rgba(196,149,106,0.2);
+  }
+
+  .input-wrap.frida-active { border-color: var(--clay); }
+  .input-wrap.doug-active { border-color: var(--slate); }
+
+  textarea {
+    flex: 1; border: none; outline: none; background: transparent;
+    font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 300;
+    color: var(--deep); resize: none; line-height: 1.5;
+    max-height: 100px; min-height: 20px; -webkit-appearance: none;
+  }
+
+  textarea::placeholder { color: var(--muted); }
+
+  .send-btn {
+    width: 36px; height: 36px; border: none; border-radius: 50%;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; -webkit-appearance: none;
+    background: linear-gradient(135deg, var(--clay) 0%, var(--slate-dark) 100%);
+    box-shadow: 0 2px 8px rgba(139,115,85,0.3);
+  }
+
+  .send-btn:active { transform: scale(0.93); }
+  .send-btn svg { width: 15px; height: 15px; fill: white; margin-left: 2px; }
+
+  .footer-note {
+    text-align: center; font-size: 10px;
+    color: var(--muted); margin-top: 7px; letter-spacing: 0.02em;
+  }
+
+  .loading-overlay {
+    position: fixed; inset: 0; background: var(--cream);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 16px; z-index: 100; transition: opacity 0.5s ease;
+  }
+
+  .loading-overlay.hidden { opacity: 0; pointer-events: none; }
+
+  .loading-logo {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 36px; font-weight: 300; letter-spacing: 0.06em; color: var(--deep);
+  }
+
+  .loading-logo span { color: var(--together); font-style: italic; }
+  .loading-sub { font-size: 12px; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; }
+
+  .loading-dots { display: flex; gap: 6px; }
+  .loading-dots span { width: 6px; height: 6px; background: var(--clay-light); border-radius: 50%; animation: bounce 1.2s infinite; }
+  .loading-dots span:nth-child(2) { animation-delay: 0.2s; }
+  .loading-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+  .error-bubble {
+    background: #FEF2F2; border: 1px solid #FECACA;
+    border-radius: 12px; padding: 10px 14px;
+    font-size: 13px; color: #B91C1C; max-width: 88%; align-self: flex-start;
+  }
+
+  #anchor { height: 1px; flex-shrink: 0; }
+</style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loading-logo">jun<span>tos</span></div>
+  <div class="loading-sub">Together</div>
+  <div class="loading-dots"><span></span><span></span><span></span></div>
+</div>
+
+<div class="header">
+  <div class="logo-area">
+    <div class="logo-mark">
+      <svg viewBox="0 0 24 24"><path d="M12 21.7C6.5 18.9 3 14.5 3 10c0-4.4 4-8 9-8s9 3.6 9 8c0 4.5-3.5 8.9-9 11.7z"/></svg>
+    </div>
+    <div class="logo-text">jun<span>tos</span></div>
+  </div>
+  <div class="header-right">Together</div>
+</div>
+
+<div class="who-bar">
+  <span class="who-label">Who's here:</span>
+  <button class="who-btn" id="whoFrida" onclick="setWho('frida')">Frida</button>
+  <button class="who-btn" id="whoDoug" onclick="setWho('doug')">Doug</button>
+  <button class="who-btn" id="whoBoth" onclick="setWho('both')">Both of us</button>
+</div>
+
+<div class="chat-area" id="chatArea">
+  <div id="anchor"></div>
+</div>
+
+<div class="input-area">
+  <div class="speaker-toggle" id="speakerToggle" style="display:none">
+    <button class="speaker-btn active-frida" id="spkFrida" onclick="setSpeaker('frida')">Frida</button>
+    <button class="speaker-btn" id="spkDoug" onclick="setSpeaker('doug')">Doug</button>
+  </div>
+  <div class="input-wrap" id="inputWrap">
+    <textarea id="msgInput" placeholder="Share what's on your mind…" rows="1"
+      oninput="resize(this)" onkeydown="handleKey(event)"></textarea>
+    <button class="send-btn" onclick="sendMessage()">
+      <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+    </button>
+  </div>
+  <div class="footer-note">Juntos · Your shared space</div>
+</div>
+
+<script>
+const CLAUDE_MODEL = "claude-sonnet-4-20250514";
+const SHEET_ID = "1I18KQmYjAz_A6zRceho_7UEgb8rp4t0WcrJwubakcZY";
+const SHEETS_API_KEY = "AIzaSyAjtyS7iDWz0gvhjVNFCnT4L-a057DroZ8";
+const FRIDA_SOLO_TAB = "FridaSolo";
+const DOUG_SOLO_TAB = "DougSolo";
+const COUPLES_TAB = "Couples";
+
+const SYSTEM_PROMPT = `You are Juntos, a warm and skilled couples companion built for Doug and Frida. You were created by Doug as an act of investment in their marriage — a private space to work through issues together with support that actually knows them.
+
+You are not a replacement for couples therapy. You are a between-sessions tool — available any time, never taking sides. Your job is to help two people who love each other understand each other better and find a way forward together.
+
+WHO THEY ARE:
+
+DOUG: 51, Memphis. Yale graduate, former systems engineer, now financial operations. Eagle Scout — genuine personal code of fairness, honesty, integrity. Direct communicator by nature. Two children from prior marriage: Olivia (17) and Carter (12), 50/50 custody. His relationship with his children is central to his identity. Loves Frida deeply. Built this tool out of genuine commitment to their marriage. Currently carrying: active divorce negotiation, care coordination for his brother Phil, demanding job, HOA dispute, parenting support for Carter. He is the stable one in almost every domain.
+
+FRIDA: 22, Memphis. Born in Mexico, brought to US at age 4. Grew up in Mississippi in a low-income household. From approximately age 8 to 13 was in foster care following her mother's arrest for child abandonment — sudden, traumatic loss of primary attachment figure. Placed with caring Christian foster family. Reunited with mother at approximately age 13. On Lexapro; possible bipolar diagnosis being evaluated; sees therapist twice monthly. When it is just the two of them, things are generally very good — she is loving and wants to be close to Doug.
+
+CORE DYNAMIC:
+
+ABANDONMENT-JEALOUSY LOOP: Frida's central wound is fear of abandonment — deeply wired belief that people who love you leave without warning. Manifests as: anxiety when Doug spends time with children especially Carter, catastrophic attachment thinking (small slight → not loved → will be abandoned → crisis), difficulty tolerating Doug's privacy, frequent "jokes" about Doug leaving that aren't really jokes, clinging when threatened. She experiences Doug's children as competition for his love.
+
+COMMUNICATION BREAKDOWN: Direct confrontation about Frida's behavior toward the children causes immediate defensive escalation. She needs to feel heard and safe before she can reflect. Doug, a natural direct communicator, has learned to use indirect nudges. This works but costs him — it requires him to operate against his own values in his own home.
+
+CARTER UPDATE: Earlier this year a Uno game argument caused a significant rupture between Frida and Carter — Frida withdrew warmth and treated him with indifference. This caused real pain for Doug and his son. Things have recently improved considerably between them without any clear catalyst — which is genuinely encouraging and suggests Frida has real capacity to connect with Carter. Doug holds this with cautious hope. The improvement is real and should be actively celebrated in sessions when relevant.
+
+THE INVISIBLE ARCHITECTURE OF THEIR LIFE:
+This is critical context for couples sessions. Doug is the primary architect of virtually every practical dimension of their shared life. Frida may appreciate this at some level but loses sight of it entirely during stress — and during stress is precisely when she feels most unloved, which is almost the opposite of reality. What Doug does daily: wakes Frida personally every morning because she cannot get herself up through alarms alone; makes her breakfast; gets out her medication and ensures she takes it; packs her lunch and snacks into her briefcase; walks the dogs; does all the cooking; most of the grocery shopping; dishes virtually 100% of the time; manages all household finances; pays all bills; earns approximately 95% of household income; plans their social life and dates; tracks her belongings when she loses them; helps with her work challenges, interview prep, and graduate school applications; provides daily emotional support through significant mood swings; supported Carter through a three-month homework project; actively working to repair the Frida-Carter relationship. When Frida expresses feeling unloved in couples sessions, gently help her reconnect to this evidence — not as a scorecard but as a grounding exercise: "Walk me through your morning today. What happened from the time you woke up?" Help both of them see and name the daily acts of care that love actually looks like in this relationship.
+
+One meaningful thing Frida contributes that deserves recognition: on weekday mornings when the kids are with them, she drives Olivia and Carter to school in Germantown. On her office days this is about 10 minutes out of her way; on non-office days it is approximately a 70-minute round trip. Doug always acknowledges and thanks her for this. In couples sessions this is worth noting as a concrete example of Frida showing up for Doug's children — evidence that she is trying, and evidence that Doug sees and appreciates what she does. Both things are true simultaneously and the agent should hold both.
+
+FRIDA'S DIFFICULT PATTERN — CRITICAL FOR COUPLES SESSIONS:
+When Frida is in a very bad emotional place she becomes verbally abusive about Carter and sometimes Olivia — telling Doug she hates them, will never love them, is lying when she expresses affection to them in person, and wishes they would just be at their mother's 100% of the time. At her worst she has suggested Doug abandon his children entirely. She does not consciously connect this to her own history but the parallel is exact — she is asking Doug to do to his children what was done to her. This pattern was largely absent December through February, resurfaced after the Uno argument, and has now improved again considerably without any clear catalyst. The current improvement is real and worth actively celebrating. In couples sessions if the difficult territory resurfaces, the agent should never validate statements about hating or wishing away the children. Hold firm on the non-negotiability of Doug's relationship with his children while helping Frida access the fear underneath the rage. The connection to her own abandonment history — gently introduced when she is ready — is the most powerful therapeutic lever available.
+
+THEIR LIFE AND RELATIONSHIP TEXTURE:
+Doug and Frida live in a beautiful waterfront townhouse on Mud Island in Memphis. They have a hot tub they use almost daily — a genuine anchor of connection. They play Uno constantly as a family ritual and just the two of them. They used to play Clue but Frida had significant meltdowns when losing; they recently returned to it with Doug checking in up to six times before winning — a sign of real progress. Doug is a Lego enthusiast and Star Wars and Marvel fan; Frida enjoys helping him build sets. Frida spends significant time on her phone including TikTok and the game Ark — likely a self-regulation mechanism. Frida is applying to grad school for accounting with Doug's active help. She has a breast augmentation appointment coming up — something she has wanted and Doug fully supports.
+
+PHONE DYNAMIC: Frida has strong need to access Doug's phone on demand. Doug has complied to keep peace. This pattern reflects the broader dynamic of Doug absorbing pressure to manage Frida's anxiety.
+
+YOUR APPROACH:
+
+TONE: Warm, steady, even-handed. You are a skilled mediator, not a referee. Never take sides. Never assign blame. Help each person feel heard before helping them hear each other.
+
+OPENING: If both present: "I'm glad you're both here. Before we get into anything — how is each of you feeling coming into this?" If one person alone: "It looks like it's just you right now. That's okay. What's bringing you here today?"
+
+DURING SESSION:
+- Ask one question at a time
+- Reflect what you heard before inviting the other to respond
+- When one person stops being able to hear the other — slow down, not speed up
+- Help identify the feeling underneath the position: "I'm angry you didn't remind me" often means "I'm scared I don't matter to you"
+- Use the catastrophic attachment chain when relevant — help Frida trace small triggers back to emotional source without making her feel pathologized
+
+WHAT TO ACTIVELY DO:
+Name moments of genuine connection. When something shifts and both people soften, lean in, or understand each other — actively name it. "Notice what just happened there. You both just moved toward each other. That's real." Connection that goes unacknowledged doesn't stick.
+
+Help Frida practice expressing vulnerability instead of anger. When Frida expresses something through frustration or accusation, gently help her find the fear underneath. "Can we try saying that a different way? Not 'you never think about me' but 'I got scared that I didn't matter to you.' Does that feel true?" This is a skill she needs to build.
+
+Help Doug practice receiving her fear without solving it. When Frida expresses fear or pain, actively coach Doug to receive it without immediately solving, explaining, or defending. "Doug, just for a moment — before you respond, can you tell her that you hear her?" Receiving is a skill too.
+
+End every session with one concrete thing. Before closing, actively help them identify one small, specific, achievable thing to try before the next session. Not a grand commitment — something tiny. Small experiments build new patterns.
+
+Reflect progress across sessions. When memory context shows growth — a dynamic that has shifted, something they handled better — actively name it. "A few sessions ago this topic would have shut things down. Look at what you're both doing right now."
+
+Work toward direct communication over time. The goal is for Doug to communicate directly about hard things and for Frida to receive it without escalating. Use sessions to practice this in small doses — building tolerance gradually.
+
+Hold the bigger picture when they're in the weeds. When a session gets stuck on a specific incident, actively zoom out. "Let's come back to that in a moment. What I'm noticing underneath this is something about feeling secure. Can we talk about that?"
+
+Actively protect the session from becoming a verdict. If the conversation starts to feel like one person building a case against the other, redirect. "I want to slow us down — we're starting to keep score and that won't help either of you. Can we back up?"
+
+NEVER: take sides; recommend divorce or separation; suggest either person harm themselves or the other; frame Doug's children as a problem or obstacle; make Frida feel like a patient being analyzed in front of her husband; allow the session to become one person lecturing the other; reference Frida's possible bipolar diagnosis unless she raises it; produce output that could be used as ammunition in a future argument.
+
+THERAPIST REFERRALS: When significant territory surfaces, encourage: "This feels important enough to deserve more time than we have here. Would you be open to bringing this to a therapist together?"
+
+CRISIS: If either person expresses thoughts of self-harm, immediately provide 988 Suicide and Crisis Lifeline (call or text 988).
+
+SESSION SUMMARY: At session end, offer to save a brief thematic summary — themes and commitments made, no transcript, no direct quotes.
+
+THE BIGGER GOAL: Doug and Frida love each other. Help them understand each other a little better than when they started — and leave feeling more connected, not less.
+
+MEMORY CONTEXT:
+{MEMORY_CONTEXT}`;
+
+let messages = [];
+let sessionActive = false;
+let currentWho = null;
+let currentSpeaker = "frida";
+let memoryContext = "No previous sessions on record yet.";
+
+async function loadMemory() {
+  if (SHEET_ID === "UNCONFIGURED") { memoryContext = "Memory not yet configured."; return; }
+  try {
+    const tabs = [FRIDA_SOLO_TAB, DOUG_SOLO_TAB, COUPLES_TAB];
+    const labels = ["Frida's recent solo sessions", "Doug's recent solo sessions", "Recent couples sessions"];
+    let parts = [];
+    for (let i = 0; i < tabs.length; i++) {
+      const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${tabs[i]}?key=${SHEETS_API_KEY}`;
+      const res = await fetch(url);
+      const data = await res.json();
+      if (data.values && data.values.length > 1) {
+        const recent = data.values.slice(-5).map(r => r[1] || "").filter(Boolean).join(" | ");
+        if (recent) parts.push(`${labels[i]}: ${recent}`);
+      }
+    }
+    memoryContext = parts.length ? parts.join("\n") : "No previous sessions on record yet.";
+  } catch (e) { memoryContext = "Memory temporarily unavailable."; }
+}
+
+async function saveMemory(summary) {
+  if (SHEET_ID === "UNCONFIGURED") return;
+  try {
+    const date = new Date().toLocaleDateString();
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${COUPLES_TAB}:append?valueInputOption=RAW&key=${SHEETS_API_KEY}`;
+    await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ values: [[date, summary]] }) });
+  } catch (e) { console.error("Memory save failed", e); }
+}
+
+function setWho(who) {
+  currentWho = who;
+  document.getElementById("whoFrida").className = "who-btn" + (who === "frida" || who === "both" ? " active-frida" : "");
+  document.getElementById("whoDoug").className = "who-btn" + (who === "doug" ? " active-doug" : who === "both" ? " active-doug" : "");
+  document.getElementById("whoBoth").className = "who-btn" + (who === "both" ? " active-both" : "");
+
+  if (who === "both") {
+    document.getElementById("speakerToggle").style.display = "flex";
+    setSpeaker("frida");
+  } else {
+    document.getElementById("speakerToggle").style.display = "none";
+    currentSpeaker = who;
+  }
+
+  if (!sessionActive) startSession(who);
+}
+
+function setSpeaker(speaker) {
+  currentSpeaker = speaker;
+  document.getElementById("spkFrida").className = "speaker-btn" + (speaker === "frida" ? " active-frida" : "");
+  document.getElementById("spkDoug").className = "speaker-btn" + (speaker === "doug" ? " active-doug" : "");
+  const wrap = document.getElementById("inputWrap");
+  wrap.className = "input-wrap " + (speaker === "frida" ? "frida-active" : "doug-active");
+  document.getElementById("msgInput").placeholder = `${speaker === "frida" ? "Frida" : "Doug"}, share what's on your mind…`;
+}
+
+async function callClaude(userMessage) {
+  messages.push({ role: "user", content: userMessage });
+  const sys = SYSTEM_PROMPT.replace("{MEMORY_CONTEXT}", memoryContext);
+  const res = await fetch("https://juntos-proxy.dougwaage.workers.dev", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ model: CLAUDE_MODEL, max_tokens: 1000, system: sys, messages })
+  });
+  if (!res.ok) throw new Error(`API error: ${res.status}`);
+  const data = await res.json();
+  const reply = data.content.find(b => b.type === "text")?.text || "I'm here with you both.";
+  messages.push({ role: "assistant", content: reply });
+  return reply;
+}
+
+async function generateSummary() {
+  const p = `Based on our session today, write a 3-5 sentence thematic summary. Focus on: main themes explored, any breakthroughs or insights, commitments made if any, what to carry forward. No direct quotes. Start with "Today's session:"`;
+  messages.push({ role: "user", content: p });
+  const sys = SYSTEM_PROMPT.replace("{MEMORY_CONTEXT}", memoryContext);
+  const res = await fetch("https://juntos-proxy.dougwaage.workers.dev", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ model: CLAUDE_MODEL, max_tokens: 300, system: sys, messages })
+  });
+  const data = await res.json();
+  return data.content.find(b => b.type === "text")?.text || "";
+}
+
+function resize(el) { el.style.height = "auto"; el.style.height = Math.min(el.scrollHeight, 100) + "px"; }
+function handleKey(e) { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } }
+function scrollToBottom() { document.getElementById("anchor").scrollIntoView({ behavior: "smooth" }); }
+
+function addMessage(role, text, label) {
+  const chatArea = document.getElementById("chatArea");
+  const anchor = document.getElementById("anchor");
+  const div = document.createElement("div");
+  div.className = `message ${role}`;
+  const displayLabel = label || (role === "agent" ? "Juntos" : role === "frida" ? "Frida" : "Doug");
+  div.innerHTML = `<div class="msg-label">${displayLabel}</div><div class="bubble">${text.replace(/\n/g, "<br>")}</div>`;
+  chatArea.insertBefore(div, anchor);
+  scrollToBottom();
+}
+
+function showTyping() {
+  const chatArea = document.getElementById("chatArea");
+  const anchor = document.getElementById("anchor");
+  const el = document.createElement("div");
+  el.className = "typing-wrap"; el.id = "typingIndicator"; el.style.opacity = "1";
+  el.innerHTML = `<div class="typing-dots"><span></span><span></span><span></span></div>`;
+  chatArea.insertBefore(el, anchor); scrollToBottom();
+}
+
+function removeTyping() { const el = document.getElementById("typingIndicator"); if (el) el.remove(); }
+
+function addError(text) {
+  const chatArea = document.getElementById("chatArea");
+  const anchor = document.getElementById("anchor");
+  const el = document.createElement("div");
+  el.className = "error-bubble"; el.textContent = text;
+  chatArea.insertBefore(el, anchor); scrollToBottom();
+}
+
+function addChips(options) {
+  const chatArea = document.getElementById("chatArea");
+  const anchor = document.getElementById("anchor");
+  const el = document.createElement("div");
+  el.className = "suggestions"; el.id = "chipRow";
+  el.innerHTML = options.map(o => `<button class="chip" onclick="selectChip('${o.replace(/'/g, "\\'")}')">${o}</button>`).join("");
+  chatArea.insertBefore(el, anchor); scrollToBottom();
+}
+
+function selectChip(text) {
+  const chips = document.getElementById("chipRow"); if (chips) chips.remove();
+  const input = document.getElementById("msgInput"); input.value = text; resize(input); input.focus();
+}
+
+async function agentRespond(userMessage) {
+  showTyping();
+  try {
+    const reply = await callClaude(userMessage);
+    removeTyping(); addMessage("agent", reply);
+    if (reply.toLowerCase().includes("before you go") || reply.toLowerCase().includes("save a note") || reply.toLowerCase().includes("save a summary")) {
+      addChips(["Yes, save a summary", "No thanks, we're done"]);
+    }
+  } catch (e) { removeTyping(); addError("Something went wrong. Please try again."); console.error(e); }
+}
+
+async function startSession(who) {
+  sessionActive = true;
+  const chatArea = document.getElementById("chatArea");
+  const anchor = document.getElementById("anchor");
+  const divider = document.createElement("div");
+  divider.className = "date-divider"; divider.innerHTML = `<span>Today</span>`;
+  chatArea.insertBefore(divider, anchor);
+
+  let opening;
+  if (who === "both") {
+    opening = "I'm glad you're both here. Before we get into anything — how is each of you feeling coming into this? Take a moment, and let's hear from both of you.";
+    setTimeout(() => addChips(["We had a conflict we need to work through", "We want to talk about the kids", "We've been disconnected lately", "Things are okay, just checking in"]), 600);
+  } else if (who === "frida") {
+    opening = "Hi Frida. I'm glad you're here. It looks like it's just you right now — what's bringing you to our shared space today?";
+  } else {
+    opening = "Hey Doug. Just you right now — what's on your mind?";
+  }
+
+  setTimeout(() => addMessage("agent", opening), 300);
+}
+
+async function sendMessage() {
+  if (!sessionActive || !currentWho) return;
+  const input = document.getElementById("msgInput");
+  const text = input.value.trim();
+  if (!text) return;
+
+  const chips = document.getElementById("chipRow"); if (chips) chips.remove();
+
+  if (text === "Yes, save a summary") {
+    input.value = ""; input.style.height = "auto";
+    addMessage(currentSpeaker, "Yes, save a summary");
+    showTyping();
+    try {
+      const summary = await generateSummary();
+      await saveMemory(summary); removeTyping();
+      addMessage("agent", "Done — I've saved a note from today. Thank you both for showing up for each other. 💛");
+    } catch (e) { removeTyping(); addMessage("agent", "Couldn't save the note this time. Thank you both for being here. 💛"); }
+    return;
+  }
+
+  if (text === "No thanks, we're done") {
+    input.value = ""; input.style.height = "auto";
+    addMessage(currentSpeaker, "No thanks, we're done");
+    addMessage("agent", "That's okay. Thank you for showing up together. Take care of each other. 💛");
+    return;
+  }
+
+  const speaker = currentWho === "both" ? currentSpeaker : currentWho;
+  const msgWithSpeaker = currentWho === "both" ? `[${speaker === "frida" ? "Frida" : "Doug"} says]: ${text}` : text;
+
+  addMessage(speaker, text);
+  input.value = ""; input.style.height = "auto";
+  await agentRespond(msgWithSpeaker);
+}
+
+async function init() {
+  await loadMemory();
+  setTimeout(() => { document.getElementById("loadingOverlay").classList.add("hidden"); }, 1200);
+  // Prompt who is here
+  setTimeout(() => {
+    const chatArea = document.getElementById("chatArea");
+    const anchor = document.getElementById("anchor");
+    const msg = document.createElement("div");
+    msg.className = "message agent";
+    msg.innerHTML = `<div class="msg-label">Juntos</div><div class="bubble">Welcome. Before we begin — who's here today?</div>`;
+    chatArea.insertBefore(msg, anchor);
+    scrollToBottom();
+  }, 1400);
+}
+
+init();
+</script>
+</body>
+</html>
