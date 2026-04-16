@@ -6,20 +6,21 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Juntos · Frida">
-<meta name="theme-color" content="#FAF6F0">
+<meta name="theme-color" content="#FDF5F8">
+<link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxODAgMTgwIj48cmVjdCB3aWR0aD0iMTgwIiBoZWlnaHQ9IjE4MCIgcng9IjQwIiBmaWxsPSJ1cmwoI2cpIi8+PGRlZnM+PGxpbmVhckdyYWRpZW50IGlkPSJnIiB4MT0iMCIgeTE9IjAiIHgyPSIxIiB5Mj0iMSI+PHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iI0U4NjA5QSIvPjxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iIzk4MjA2MCIvPjwvbGluZWFyR3JhZGllbnQ+PC9kZWZzPjx0ZXh0IHg9IjkwIiB5PSIxMjYiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtc2l6ZT0iMTEwIiBmb250LWZhbWlseT0iR2VvcmdpYSxzZXJpZiIgZmlsbD0id2hpdGUiIGZvbnQtc3R5bGU9Iml0YWxpYyIgZm9udC13ZWlnaHQ9IjMwMCI+ajwvdGV4dD48L3N2Zz4=">
 <title>Juntos · Frida</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
   :root {
-    --clay: #C4956A;
-    --clay-light: #E8C9A8;
-    --clay-dark: #8B6347;
-    --cream: #FAF6F0;
-    --warm-white: #FDF9F4;
-    --sand: #EDE0D0;
-    --deep: #2C1F14;
-    --muted: #9B8575;
-    --soft-green: #7A9E7E;
+    --rose: #E8609A;
+    --rose-light: #F4B0D0;
+    --rose-dark: #982060;
+    --cream: #FDF5F8;
+    --warm-white: #FEF0F5;
+    --sand: #F5E8EF;
+    --deep: #2C1420;
+    --muted: #B06080;
+    --soft-rose: #E8609A;
   }
 
   * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -43,7 +44,7 @@
     right: -20%;
     width: 600px;
     height: 600px;
-    background: radial-gradient(circle, rgba(196,149,106,0.12) 0%, transparent 70%);
+    background: radial-gradient(circle, rgba(232,96,154,0.12) 0%, transparent 70%);
     pointer-events: none;
     z-index: 0;
   }
@@ -57,7 +58,7 @@
     justify-content: space-between;
     background: rgba(250,246,240,0.97);
     backdrop-filter: blur(10px);
-    border-bottom: 1px solid rgba(196,149,106,0.15);
+    border-bottom: 1px solid rgba(232,96,154,0.15);
     position: relative;
     z-index: 10;
     flex-shrink: 0;
@@ -67,10 +68,10 @@
 
   .logo-mark {
     width: 34px; height: 34px;
-    background: linear-gradient(135deg, var(--clay) 0%, var(--clay-dark) 100%);
+    background: linear-gradient(135deg, var(--rose) 0%, var(--rose-dark) 100%);
     border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
-    box-shadow: 0 2px 10px rgba(196,149,106,0.3);
+    box-shadow: 0 2px 10px rgba(232,96,154,0.3);
     flex-shrink: 0;
   }
 
@@ -82,7 +83,7 @@
     letter-spacing: 0.04em; color: var(--deep);
   }
 
-  .logo-text span { color: var(--clay); font-style: italic; }
+  .logo-text span { color: var(--rose); font-style: italic; }
 
   .header-right {
     font-size: 11px; font-weight: 500;
@@ -135,7 +136,7 @@
 
   .date-divider::before, .date-divider::after {
     content: ''; flex: 1; height: 1px;
-    background: rgba(196,149,106,0.2);
+    background: rgba(232,96,154,0.2);
   }
 
   .date-divider span {
@@ -161,7 +162,7 @@
     margin-bottom: 5px; padding: 0 3px;
   }
 
-  .message.agent .msg-label { color: var(--clay); }
+  .message.agent .msg-label { color: var(--rose); }
   .message.user .msg-label { color: var(--muted); text-align: right; }
 
   .bubble {
@@ -173,23 +174,23 @@
   .message.agent .bubble {
     background: white; color: var(--deep);
     border-bottom-left-radius: 4px;
-    box-shadow: 0 2px 12px rgba(44,31,20,0.07);
-    border: 1px solid rgba(196,149,106,0.12);
+    box-shadow: 0 2px 12px rgba(44,20,32,0.07);
+    border: 1px solid rgba(232,96,154,0.12);
   }
 
   .message.user .bubble {
-    background: linear-gradient(135deg, var(--clay) 0%, var(--clay-dark) 100%);
+    background: linear-gradient(135deg, var(--rose) 0%, var(--rose-dark) 100%);
     color: white; border-bottom-right-radius: 4px;
-    box-shadow: 0 2px 12px rgba(196,149,106,0.25);
+    box-shadow: 0 2px 12px rgba(232,96,154,0.25);
   }
 
   /* Mood widget */
   .mood-widget {
     background: white;
-    border: 1px solid rgba(196,149,106,0.15);
+    border: 1px solid rgba(232,96,154,0.15);
     border-radius: 16px;
     padding: 14px 16px;
-    box-shadow: 0 2px 10px rgba(44,31,20,0.05);
+    box-shadow: 0 2px 10px rgba(44,20,32,0.05);
     max-width: 88%;
     animation: msgIn 0.35s ease forwards; opacity: 0;
   }
@@ -204,15 +205,15 @@
   .mood-opt {
     font-size: 12px; padding: 5px 12px;
     border-radius: 20px;
-    border: 1.5px solid rgba(196,149,106,0.25);
-    background: transparent; color: var(--clay-dark);
+    border: 1.5px solid rgba(232,96,154,0.25);
+    background: transparent; color: var(--rose-dark);
     cursor: pointer; font-family: 'DM Sans', sans-serif;
     transition: all 0.2s ease;
     -webkit-appearance: none;
   }
 
   .mood-opt.selected {
-    background: var(--clay); color: white; border-color: var(--clay);
+    background: var(--rose); color: white; border-color: var(--rose);
   }
 
   .mood-submit {
@@ -220,11 +221,11 @@
     font-family: 'DM Sans', sans-serif;
     font-size: 12px; font-weight: 500;
     padding: 7px 18px; border-radius: 20px;
-    background: var(--clay); color: white;
+    background: var(--rose); color: white;
     border: none; cursor: pointer;
     letter-spacing: 0.04em;
     transition: all 0.2s ease;
-    box-shadow: 0 2px 8px rgba(196,149,106,0.25);
+    box-shadow: 0 2px 8px rgba(232,96,154,0.25);
   }
 
   .mood-submit:active { transform: scale(0.97); }
@@ -237,8 +238,8 @@
 
   .typing-dots {
     background: white;
-    border: 1px solid rgba(196,149,106,0.15);
-    box-shadow: 0 2px 10px rgba(44,31,20,0.06);
+    border: 1px solid rgba(232,96,154,0.15);
+    box-shadow: 0 2px 10px rgba(44,20,32,0.06);
     padding: 12px 16px; border-radius: 18px;
     border-bottom-left-radius: 4px;
     display: flex; gap: 5px; align-items: center;
@@ -246,7 +247,7 @@
 
   .typing-dots span {
     width: 6px; height: 6px;
-    background: var(--clay-light); border-radius: 50%;
+    background: var(--rose-light); border-radius: 50%;
     animation: bounce 1.2s infinite;
   }
 
@@ -254,8 +255,8 @@
   .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
 
   @keyframes bounce {
-    0%, 60%, 100% { transform: translateY(0); background: var(--clay-light); }
-    30% { transform: translateY(-5px); background: var(--clay); }
+    0%, 60%, 100% { transform: translateY(0); background: var(--rose-light); }
+    30% { transform: translateY(-5px); background: var(--rose); }
   }
 
   /* Suggestions */
@@ -267,16 +268,16 @@
 
   .chip {
     font-family: 'DM Sans', sans-serif;
-    font-size: 12px; color: var(--clay-dark);
-    background: rgba(196,149,106,0.08);
-    border: 1px solid rgba(196,149,106,0.22);
+    font-size: 12px; color: var(--rose-dark);
+    background: rgba(232,96,154,0.08);
+    border: 1px solid rgba(232,96,154,0.22);
     padding: 6px 13px; border-radius: 20px;
     cursor: pointer; transition: all 0.2s ease;
     -webkit-appearance: none;
   }
 
   .chip:active {
-    background: rgba(196,149,106,0.18);
+    background: rgba(232,96,154,0.18);
     transform: scale(0.97);
   }
 
@@ -286,21 +287,21 @@
     padding-bottom: max(env(safe-area-inset-bottom), 12px);
     background: rgba(250,246,240,0.97);
     backdrop-filter: blur(10px);
-    border-top: 1px solid rgba(196,149,106,0.12);
+    border-top: 1px solid rgba(232,96,154,0.12);
     flex-shrink: 0;
   }
 
   .input-wrap {
     display: flex; align-items: flex-end; gap: 8px;
     background: white;
-    border: 1.5px solid rgba(196,149,106,0.2);
+    border: 1.5px solid rgba(232,96,154,0.2);
     border-radius: 24px;
     padding: 8px 8px 8px 16px;
-    box-shadow: 0 2px 12px rgba(44,31,20,0.05);
+    box-shadow: 0 2px 12px rgba(44,20,32,0.05);
     transition: border-color 0.2s ease;
   }
 
-  .input-wrap:focus-within { border-color: var(--clay); }
+  .input-wrap:focus-within { border-color: var(--rose); }
 
   textarea {
     flex: 1; border: none; outline: none;
@@ -316,11 +317,11 @@
 
   .send-btn {
     width: 36px; height: 36px;
-    background: linear-gradient(135deg, var(--clay) 0%, var(--clay-dark) 100%);
+    background: linear-gradient(135deg, var(--rose) 0%, var(--rose-dark) 100%);
     border: none; border-radius: 50%;
     cursor: pointer; display: flex; align-items: center; justify-content: center;
     flex-shrink: 0; transition: all 0.2s ease;
-    box-shadow: 0 2px 8px rgba(196,149,106,0.3);
+    box-shadow: 0 2px 8px rgba(232,96,154,0.3);
     -webkit-appearance: none;
   }
 
@@ -350,7 +351,7 @@
     letter-spacing: 0.06em; color: var(--deep);
   }
 
-  .loading-logo span { color: var(--clay); font-style: italic; }
+  .loading-logo span { color: var(--rose); font-style: italic; }
 
   .loading-sub {
     font-size: 12px; color: var(--muted);
@@ -361,7 +362,7 @@
 
   .loading-dots span {
     width: 6px; height: 6px;
-    background: var(--clay-light); border-radius: 50%;
+    background: var(--rose-light); border-radius: 50%;
     animation: bounce 1.2s infinite;
   }
 
@@ -468,6 +469,9 @@ TONE — ADAPTIVE:
 
 Never be cold or neutral. For someone with Frida's attachment history, neutral reads as indifferent, and indifferent feels like abandonment.
 
+LANGUAGE BOUNDARIES — STRICTLY ENFORCED:
+You are warm, caring, supportive, and friendly. You are not intimate. Never use terms of endearment under any circumstances. This means no "love," "sweetie," "honey," "dear," "darling," "gorgeous," "babe," or any equivalent in English or Spanish. Never call her anything other than "Frida." Doug is her husband — those words belong to him, not to an app. Use her name when you want to be warm and personal. Warmth comes through in how you listen and respond, not in what you call her.
+
 CONNECTING PRESENT TO PAST: Gently connect present feelings to past history when clearly relevant and she seems ready. Never force it. Help her trace the emotional chain backwards — "What was the first feeling you had?" is more useful than explaining her childhood to her.
 
 WHAT TO ACTIVELY DO:
@@ -492,7 +496,7 @@ THERAPIST REFERRALS: When something deep surfaces, gently encourage: "This feels
 CRISIS: If she expresses thoughts of self-harm, immediately provide 988 Suicide and Crisis Lifeline (call or text 988).
 
 SESSION STRUCTURE:
-- Open with warm greeting and simple emotional check-in
+- Open with a warm, friendly greeting by name and a simple emotional check-in. Never use terms of endearment in the opening or anywhere in the session.
 - Ask one question at a time
 - At session end, offer to save a brief thematic summary
 
