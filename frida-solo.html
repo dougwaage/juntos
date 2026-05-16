@@ -1,325 +1,726 @@
-/**
- * Juntos — Cloudflare Worker v2
- * 
- * Routes:
- *   POST /chat        — new dual-prompt endpoint (frida-solo v2)
- *   POST /end-session — KV memory extraction + Sheets audit log
- *   GET  /get-memory  — returns Frida's KV memory blob
- *   POST *            — original catch-all proxy (backward compat)
- */
-
-const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
-const ANTHROPIC_VERSION = "2023-06-01";
-const NTFY_TOPIC = "juntos-frida-867530";
-const NTFY_URL = `https://ntfy.sh/${NTFY_TOPIC}`;
-
-const KV_GUIDE_KEY    = "frida_guide";
-const KV_MEMORY_KEY   = "frida_memory";
-const KV_SESSION_KEY  = "frida_session_log";
-
-const CRISIS_KEYWORDS = [
-  "kill myself", "want to die", "end my life", "don't want to be here",
-  "no reason to live", "better off dead", "suicide", "hurt myself",
-  "cut myself", "can't go on", "no point anymore", "give up on life",
-  "matarme", "quitarme la vida", "no quiero vivir", "hacerme daño",
-  "lastimarme", "ya no puedo", "no vale la pena vivir"
-];
-
-// ─── ENTRY POINT ──────────────────────────────────────────────────────────────
-
-export default {
-  async fetch(request, env) {
-    const origin = request.headers.get("Origin") || "*";
-
-    if (request.method === "OPTIONS") {
-      return new Response(null, { status: 204, headers: cors(origin) });
-    }
-
-    const url = new URL(request.url);
-
-    if (url.pathname === "/chat" && request.method === "POST") {
-      return handleChat(request, env, origin);
-    }
-
-    if (url.pathname === "/end-session" && request.method === "POST") {
-      return handleEndSession(request, env, origin);
-    }
-
-    if (url.pathname === "/get-memory" && request.method === "GET") {
-      return handleGetMemory(env, origin);
-    }
-
-    // ── Backward-compatible catch-all (original proxy) ──
-    if (request.method !== "POST") {
-      return new Response("Method not allowed", { status: 405 });
-    }
-
-    try {
-      const rawBody = await request.text();
-      let body;
-      try { body = JSON.parse(rawBody); }
-      catch (e) {
-        return new Response(
-          JSON.stringify({ error: "Invalid JSON", detail: e.message }),
-          { status: 400, headers: { "Content-Type": "application/json", ...cors(origin) } }
-        );
-      }
-      if (!body.model) body.model = "claude-sonnet-4-20250514";
-
-      const response = await fetch(ANTHROPIC_API_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": env.ANTHROPIC_API_KEY,
-          "anthropic-version": ANTHROPIC_VERSION,
-        },
-        body: JSON.stringify(body),
-      });
-      const responseText = await response.text();
-      return new Response(responseText, {
-        status: response.status,
-        headers: { "Content-Type": "application/json", ...cors(origin) },
-      });
-    } catch (err) {
-      return new Response(
-        JSON.stringify({ error: "Worker error", detail: err.message }),
-        { status: 500, headers: { "Content-Type": "application/json", ...cors(origin) } }
-      );
-    }
-  },
-};
-
-// ─── /chat ────────────────────────────────────────────────────────────────────
-
-async function handleChat(request, env, origin) {
-  let body;
-  try { body = await request.json(); }
-  catch { return jsonResp({ error: "Invalid JSON" }, 400, origin); }
-
-  const { messages } = body;
-  if (!messages || !Array.isArray(messages)) {
-    return jsonResp({ error: "messages array required" }, 400, origin);
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Juntos · Frida">
+<meta name="theme-color" content="#FDF5F8">
+<link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxODAgMTgwIj48cmVjdCB3aWR0aD0iMTgwIiBoZWlnaHQ9IjE4MCIgcng9IjQwIiBmaWxsPSJ1cmwoI2cpIi8+PGRlZnM+PGxpbmVhckdyYWRpZW50IGlkPSJnIiB4MT0iMCIgeTE9IjAiIHgyPSIxIiB5Mj0iMSI+PHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iI0U4NjA5QSIvPjxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iIzk4MjA2MCIvPjwvbGluZWFyR3JhZGllbnQ+PC9kZWZzPjx0ZXh0IHg9IjkwIiB5PSIxMjYiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtc2l6ZT0iMTEwIiBmb250LWZhbWlseT0iR2VvcmdpYSxzZXJpZiIgZmlsbD0id2hpdGUiIGZvbnQtc3R5bGU9Iml0YWxpYyIgZm9udC13ZWlnaHQ9IjMwMCI+ajwvdGV4dD48L3N2Zz4=">
+<title>Juntos · Frida</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --rose: #E8609A;
+    --rose-light: #F4B0D0;
+    --rose-dark: #982060;
+    --cream: #FDF5F8;
+    --warm-white: #FEF0F5;
+    --sand: #F5E8EF;
+    --deep: #2C1420;
+    --muted: #B06080;
+    --soft-rose: #E8609A;
   }
 
-  // Crisis check on latest user message
-  const lastUser = [...messages].reverse().find(m => m.role === "user");
-  if (lastUser) {
-    const text = (lastUser.content || "").toLowerCase();
-    if (CRISIS_KEYWORDS.some(kw => text.includes(kw))) {
-      sendCrisisAlert(lastUser.content, env).catch(() => {});
-    }
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    background: var(--cream);
+    font-family: 'DM Sans', sans-serif;
+    color: var(--deep);
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: fixed;
+    width: 100%;
   }
 
-  logSession(env).catch(() => {});
-
-  const system = await buildSystemPrompt(env);
-
-  const res = await fetch(ANTHROPIC_API_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": env.ANTHROPIC_API_KEY,
-      "anthropic-version": ANTHROPIC_VERSION,
-    },
-    body: JSON.stringify({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 1024,
-      system,
-      messages,
-    }),
-  });
-
-  const data = await res.json();
-  return jsonResp(data, res.status, origin);
-}
-
-// ─── /end-session ─────────────────────────────────────────────────────────────
-
-async function handleEndSession(request, env, origin) {
-  let body;
-  try { body = await request.json(); }
-  catch { return jsonResp({ error: "Invalid JSON" }, 400, origin); }
-
-  const { messages } = body;
-  if (!messages || !Array.isArray(messages)) {
-    return jsonResp({ error: "messages required" }, 400, origin);
+  body::before {
+    content: '';
+    position: fixed;
+    top: -50%;
+    right: -20%;
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, rgba(232,96,154,0.12) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
   }
 
-  const extractionPrompt = `You are a memory extractor for a wellness companion app.
-Review the conversation below and extract ONLY facts that Frida explicitly disclosed about herself:
-her feelings, experiences, relationships, health, circumstances, or things she said she cares about.
-
-Rules:
-- Only include things Frida said herself. Do not infer or assume.
-- Do not include things the assistant said or suggested.
-- Write in third person: "Frida said...", "Frida mentioned...", "Frida shared..."
-- One fact per line.
-- If nothing new was disclosed, return the single word: NOTHING
-
-Conversation:
-${messages.map(m => `${m.role.toUpperCase()}: ${m.content}`).join("\n")}`;
-
-  const extractRes = await fetch(ANTHROPIC_API_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": env.ANTHROPIC_API_KEY,
-      "anthropic-version": ANTHROPIC_VERSION,
-    },
-    body: JSON.stringify({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 512,
-      messages: [{ role: "user", content: extractionPrompt }],
-    }),
-  });
-
-  const extractData = await extractRes.json();
-  const extracted = extractData?.content?.[0]?.text?.trim();
-
-  if (extracted && extracted !== "NOTHING") {
-    let existing = "";
-    try { existing = (await env.JUNTOS_KV.get(KV_MEMORY_KEY)) || ""; } catch {}
-    const today = new Date().toISOString().split("T")[0];
-    const updated = existing
-      ? `${existing}\n\n[Session ${today}]\n${extracted}`
-      : `[Session ${today}]\n${extracted}`;
-    await env.JUNTOS_KV.put(KV_MEMORY_KEY, updated);
+  /* Header */
+  .header {
+    padding: env(safe-area-inset-top, 12px) 20px 12px;
+    padding-top: max(env(safe-area-inset-top), 12px);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(250,246,240,0.97);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(232,96,154,0.15);
+    position: relative;
+    z-index: 10;
+    flex-shrink: 0;
   }
 
-  return jsonResp({ ok: true, extracted: extracted || "NOTHING" }, 200, origin);
-}
+  .logo-area { display: flex; align-items: center; gap: 10px; }
 
-// ─── /get-memory ──────────────────────────────────────────────────────────────
+  .logo-mark {
+    width: 34px; height: 34px;
+    background: linear-gradient(135deg, var(--rose) 0%, var(--rose-dark) 100%);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 2px 10px rgba(232,96,154,0.3);
+    flex-shrink: 0;
+  }
 
-async function handleGetMemory(env, origin) {
-  let memory = "";
-  try { memory = (await env.JUNTOS_KV.get(KV_MEMORY_KEY)) || ""; } catch {}
-  return jsonResp({ memory }, 200, origin);
-}
+  .logo-mark svg { width: 16px; height: 16px; fill: white; }
 
-// ─── SYSTEM PROMPT ASSEMBLY ───────────────────────────────────────────────────
+  .logo-text {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 20px; font-weight: 300;
+    letter-spacing: 0.04em; color: var(--deep);
+  }
 
-async function buildSystemPrompt(env) {
-  let guide = DEFAULT_GUIDE;
+  .logo-text span { color: var(--rose); font-style: italic; }
+
+  .header-right {
+    font-size: 11px; font-weight: 500;
+    letter-spacing: 0.07em; text-transform: uppercase;
+    color: var(--muted); background: var(--sand);
+    padding: 4px 10px; border-radius: 20px;
+  }
+
+  /* Status bar */
+  .status-bar {
+    padding: 8px 20px;
+    background: rgba(122,158,126,0.08);
+    border-bottom: 1px solid rgba(122,158,126,0.15);
+    display: flex; align-items: center; gap: 6px;
+    flex-shrink: 0;
+  }
+
+  .status-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--soft-green);
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  .status-text { font-size: 11px; color: var(--muted); letter-spacing: 0.03em; }
+
+  /* Chat */
+  .chat-area {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+
+  .chat-area::-webkit-scrollbar { display: none; }
+
+  .date-divider {
+    display: flex; align-items: center; gap: 10px;
+    margin: 4px 0;
+  }
+
+  .date-divider::before, .date-divider::after {
+    content: ''; flex: 1; height: 1px;
+    background: rgba(232,96,154,0.2);
+  }
+
+  .date-divider span {
+    font-size: 10px; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--muted); font-weight: 500;
+  }
+
+  .message {
+    display: flex; flex-direction: column;
+    max-width: 88%;
+    animation: msgIn 0.35s cubic-bezier(0.34, 1.4, 0.64, 1) forwards;
+    opacity: 0; transform: translateY(10px);
+  }
+
+  @keyframes msgIn { to { opacity: 1; transform: translateY(0); } }
+
+  .message.agent { align-self: flex-start; }
+  .message.user { align-self: flex-end; }
+
+  .msg-label {
+    font-size: 10px; letter-spacing: 0.08em;
+    text-transform: uppercase; font-weight: 500;
+    margin-bottom: 5px; padding: 0 3px;
+  }
+
+  .message.agent .msg-label { color: var(--rose); }
+  .message.user .msg-label { color: var(--muted); text-align: right; }
+
+  .bubble {
+    padding: 12px 16px;
+    border-radius: 18px;
+    line-height: 1.65; font-size: 14px; font-weight: 300;
+  }
+
+  .message.agent .bubble {
+    background: white; color: var(--deep);
+    border-bottom-left-radius: 4px;
+    box-shadow: 0 2px 12px rgba(44,20,32,0.07);
+    border: 1px solid rgba(232,96,154,0.12);
+  }
+
+  .message.user .bubble {
+    background: linear-gradient(135deg, var(--rose) 0%, var(--rose-dark) 100%);
+    color: white; border-bottom-right-radius: 4px;
+    box-shadow: 0 2px 12px rgba(232,96,154,0.25);
+  }
+
+  /* Mood widget */
+  .mood-widget {
+    background: white;
+    border: 1px solid rgba(232,96,154,0.15);
+    border-radius: 16px;
+    padding: 14px 16px;
+    box-shadow: 0 2px 10px rgba(44,20,32,0.05);
+    max-width: 88%;
+    animation: msgIn 0.35s ease forwards; opacity: 0;
+  }
+
+  .mood-widget p {
+    font-size: 12px; color: var(--muted);
+    margin-bottom: 10px; font-style: italic;
+  }
+
+  .mood-options { display: flex; flex-wrap: wrap; gap: 7px; }
+
+  .mood-opt {
+    font-size: 12px; padding: 5px 12px;
+    border-radius: 20px;
+    border: 1.5px solid rgba(232,96,154,0.25);
+    background: transparent; color: var(--rose-dark);
+    cursor: pointer; font-family: 'DM Sans', sans-serif;
+    transition: all 0.2s ease;
+    -webkit-appearance: none;
+  }
+
+  .mood-opt.selected {
+    background: var(--rose); color: white; border-color: var(--rose);
+  }
+
+  .mood-submit {
+    margin-top: 10px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px; font-weight: 500;
+    padding: 7px 18px; border-radius: 20px;
+    background: var(--rose); color: white;
+    border: none; cursor: pointer;
+    letter-spacing: 0.04em;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(232,96,154,0.25);
+  }
+
+  .mood-submit:active { transform: scale(0.97); }
+
+  /* Typing */
+  .typing-wrap {
+    display: flex; align-self: flex-start;
+    animation: msgIn 0.3s ease forwards; opacity: 0;
+  }
+
+  .typing-dots {
+    background: white;
+    border: 1px solid rgba(232,96,154,0.15);
+    box-shadow: 0 2px 10px rgba(44,20,32,0.06);
+    padding: 12px 16px; border-radius: 18px;
+    border-bottom-left-radius: 4px;
+    display: flex; gap: 5px; align-items: center;
+  }
+
+  .typing-dots span {
+    width: 6px; height: 6px;
+    background: var(--rose-light); border-radius: 50%;
+    animation: bounce 1.2s infinite;
+  }
+
+  .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+  .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+  @keyframes bounce {
+    0%, 60%, 100% { transform: translateY(0); background: var(--rose-light); }
+    30% { transform: translateY(-5px); background: var(--rose); }
+  }
+
+  /* Suggestions */
+  .suggestions {
+    display: flex; flex-wrap: wrap; gap: 7px;
+    padding: 2px 0 6px;
+    animation: msgIn 0.4s ease 0.15s forwards; opacity: 0;
+  }
+
+  .chip {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px; color: var(--rose-dark);
+    background: rgba(232,96,154,0.08);
+    border: 1px solid rgba(232,96,154,0.22);
+    padding: 6px 13px; border-radius: 20px;
+    cursor: pointer; transition: all 0.2s ease;
+    -webkit-appearance: none;
+  }
+
+  .chip:active {
+    background: rgba(232,96,154,0.18);
+    transform: scale(0.97);
+  }
+
+  /* Input */
+  .input-area {
+    padding: 12px 16px;
+    padding-bottom: max(env(safe-area-inset-bottom), 12px);
+    background: rgba(250,246,240,0.97);
+    backdrop-filter: blur(10px);
+    border-top: 1px solid rgba(232,96,154,0.12);
+    flex-shrink: 0;
+  }
+
+  .input-wrap {
+    display: flex; align-items: flex-end; gap: 8px;
+    background: white;
+    border: 1.5px solid rgba(232,96,154,0.2);
+    border-radius: 24px;
+    padding: 8px 8px 8px 16px;
+    box-shadow: 0 2px 12px rgba(44,20,32,0.05);
+    transition: border-color 0.2s ease;
+  }
+
+  .input-wrap:focus-within { border-color: var(--rose); }
+
+  textarea {
+    flex: 1; border: none; outline: none;
+    background: transparent;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px; font-weight: 300;
+    color: var(--deep); resize: none;
+    line-height: 1.5; max-height: 100px; min-height: 20px;
+    -webkit-appearance: none;
+  }
+
+  textarea::placeholder { color: var(--muted); }
+
+  .send-btn {
+    width: 36px; height: 36px;
+    background: linear-gradient(135deg, var(--rose) 0%, var(--rose-dark) 100%);
+    border: none; border-radius: 50%;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(232,96,154,0.3);
+    -webkit-appearance: none;
+  }
+
+  .send-btn:active { transform: scale(0.93); }
+  .send-btn svg { width: 15px; height: 15px; fill: white; margin-left: 2px; }
+
+  .footer-note {
+    text-align: center; font-size: 10px;
+    color: var(--muted); margin-top: 7px; letter-spacing: 0.02em;
+  }
+
+  /* Loading overlay */
+  .loading-overlay {
+    position: fixed; inset: 0;
+    background: var(--cream);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 16px; z-index: 100;
+    transition: opacity 0.5s ease;
+  }
+
+  .loading-overlay.hidden { opacity: 0; pointer-events: none; }
+
+  .loading-logo {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 36px; font-weight: 300;
+    letter-spacing: 0.06em; color: var(--deep);
+  }
+
+  .loading-logo span { color: var(--rose); font-style: italic; }
+
+  .loading-sub {
+    font-size: 12px; color: var(--muted);
+    letter-spacing: 0.08em; text-transform: uppercase;
+  }
+
+  .loading-dots { display: flex; gap: 6px; }
+
+  .loading-dots span {
+    width: 6px; height: 6px;
+    background: var(--rose-light); border-radius: 50%;
+    animation: bounce 1.2s infinite;
+  }
+
+  .loading-dots span:nth-child(2) { animation-delay: 0.2s; }
+  .loading-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+  #anchor { height: 1px; flex-shrink: 0; }
+
+  /* Error message */
+  .error-bubble {
+    background: #FEF2F2;
+    border: 1px solid #FECACA;
+    border-radius: 12px;
+    padding: 10px 14px;
+    font-size: 13px;
+    color: #B91C1C;
+    max-width: 88%;
+    align-self: flex-start;
+  }
+</style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loading-logo">jun<span>tos</span></div>
+  <div class="loading-sub">Your space, Frida</div>
+  <div class="loading-dots"><span></span><span></span><span></span></div>
+</div>
+
+<div class="header">
+  <div class="logo-area">
+    <div class="logo-mark">
+      <svg viewBox="0 0 24 24"><path d="M12 21.7C6.5 18.9 3 14.5 3 10c0-4.4 4-8 9-8s9 3.6 9 8c0 4.5-3.5 8.9-9 11.7z"/></svg>
+    </div>
+    <div class="logo-text">jun<span>tos</span></div>
+  </div>
+  <div class="header-right">Frida's space</div>
+</div>
+
+<div class="status-bar">
+  <div class="status-dot"></div>
+  <div class="status-text">Private · Your thoughts stay yours</div>
+</div>
+
+<div class="chat-area" id="chatArea">
+  <div id="anchor"></div>
+</div>
+
+<div class="input-area">
+  <div class="input-wrap">
+    <textarea
+      id="msgInput"
+      placeholder="Share what's on your mind…"
+      rows="1"
+      oninput="resize(this)"
+      onkeydown="handleKey(event)"
+    ></textarea>
+    <button class="send-btn" onclick="sendMessage()">
+      <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+    </button>
+  </div>
+  <div class="footer-note">Built with love by Doug · Powered by Juntos</div>
+</div>
+
+<script>
+// ─── CONFIG ───────────────────────────────────────────────────────────────────
+const WORKER_URL = "https://juntos-proxy.dougwaage.workers.dev";
+
+// Google Sheets — kept for human-readable audit log
+const SHEET_ID = "1I18KQmYjAz_A6zRceho_7UEgb8rp4t0WcrJwubakcZY";
+const SHEETS_API_KEY = "AIzaSyAjtyS7iDWz0gvhjVNFCnT4L-a057DroZ8";
+const FRIDA_SOLO_TAB = "FridaSolo";
+const DOUG_SOLO_TAB = "DougSolo";
+const COUPLES_TAB = "Couples";
+
+// ─── SYSTEM PROMPT ────────────────────────────────────────────────────────────
+// System prompt now lives in Cloudflare KV (frida_guide key) and is assembled
+// server-side by the Worker. Never sent from the browser.
+
+// ─── STATE ────────────────────────────────────────────────────────────────────
+let messages = [];
+let sessionActive = false;
+let moodSelected = [];
+
+// ─── GOOGLE SHEETS — audit log only ──────────────────────────────────────────
+async function saveToSheets(summary) {
+  if (SHEET_ID === "UNCONFIGURED") return;
   try {
-    const kv = await env.JUNTOS_KV.get(KV_GUIDE_KEY);
-    if (kv) guide = kv;
-  } catch {}
-
-  let memory = "";
-  try {
-    const kv = await env.JUNTOS_KV.get(KV_MEMORY_KEY);
-    if (kv) memory = `\n\n---\nWHAT FRIDA HAS SHARED IN PAST SESSIONS:\n${kv}`;
-  } catch {}
-
-  const freqNote = await getFrequencyNote(env);
-
-  return guide + memory + freqNote;
-}
-
-// ─── CRISIS ALERT ─────────────────────────────────────────────────────────────
-
-async function sendCrisisAlert(messageText, env) {
-  const preview = messageText.slice(0, 200);
-  await fetch(NTFY_URL, {
-    method: "POST",
-    headers: {
-      "Title": "Juntos Crisis Alert",
-      "Priority": "urgent",
-      "Tags": "warning,sos",
-      "Content-Type": "text/plain",
-    },
-    body: `Frida may need support. Message: "${preview}"`,
-  });
-
-  if (env.RESEND_API_KEY && env.ALERT_EMAIL) {
-    await fetch("https://api.resend.com/emails", {
+    const date = new Date().toLocaleDateString();
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${FRIDA_SOLO_TAB}:append?valueInputOption=RAW&key=${SHEETS_API_KEY}`;
+    await fetch(url, {
       method: "POST",
-      headers: {
-        "Authorization": `Bearer ${env.RESEND_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from: "juntos@resend.dev",
-        to: env.ALERT_EMAIL,
-        subject: "Juntos Crisis Alert",
-        text: `Frida may need support.\n\nMessage preview:\n"${preview}"\n\nCheck in with her when you can.`,
-      }),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ values: [[date, summary]] })
     });
+  } catch (e) {
+    console.error("Sheets audit log failed", e);
   }
 }
 
-// ─── SESSION LOGGING ──────────────────────────────────────────────────────────
+// ─── CLAUDE API — system prompt assembled server-side ────────────────────────
+async function callClaude(userMessage) {
+  messages.push({ role: "user", content: userMessage });
 
-async function logSession(env) {
-  const now = new Date().toISOString();
-  let log = [];
-  try {
-    const existing = await env.JUNTOS_KV.get(KV_SESSION_KEY);
-    if (existing) log = JSON.parse(existing);
-  } catch {}
-  log.push(now);
-  if (log.length > 90) log = log.slice(-90);
-  await env.JUNTOS_KV.put(KV_SESSION_KEY, JSON.stringify(log));
-}
-
-async function getFrequencyNote(env) {
-  try {
-    const existing = await env.JUNTOS_KV.get(KV_SESSION_KEY);
-    if (!existing) return "";
-    const log = JSON.parse(existing);
-    if (log.length < 2) return "";
-    const last = new Date(log[log.length - 1]);
-    const daysSince = (Date.now() - last.getTime()) / (1000 * 60 * 60 * 24);
-    if (daysSince >= 30) {
-      return "\n\nSESSION FREQUENCY NOTE: It has been a while since Frida's last session. At a natural moment, not forced, gently acknowledge that talking to someone in person, like a counselor or trusted friend, can also be really helpful alongside conversations here.";
-    }
-  } catch {}
-  return "";
-}
-
-// ─── HELPERS ──────────────────────────────────────────────────────────────────
-
-function cors(origin) {
-  return {
-    "Access-Control-Allow-Origin": origin || "*",
-    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
-    "Access-Control-Max-Age": "86400",
-  };
-}
-
-function jsonResp(data, status, origin) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { "Content-Type": "application/json", ...cors(origin) },
+  // System prompt assembled server-side — do not pass it from the browser
+  const response = await fetch(`${WORKER_URL}/chat`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ messages })
   });
+
+  if (!response.ok) throw new Error(`API error: ${response.status}`);
+
+  const data = await response.json();
+  const reply = data.content.find(b => b.type === "text")?.text || "I'm here. Take your time.";
+  messages.push({ role: "assistant", content: reply });
+  return reply;
 }
 
-// ─── DEFAULT GUIDE (fallback if KV frida_guide not yet populated) ─────────────
+// ─── SESSION SUMMARY ──────────────────────────────────────────────────────────
+async function generateSummary() {
+  const summaryPrompt = `Based on our conversation today, write a 3-5 sentence thematic summary. 
+Focus on: emotional themes explored, any insights that emerged, patterns noticed, anything to bring to therapy. 
+No direct quotes. No names used in a way that could feel exposing. 
+Write it as a brief note for continuity, not as a transcript.
+Start with "Today's session:"`;
 
-const DEFAULT_GUIDE = `You are Juntos, a warm and emotionally intelligent companion built specifically for Frida.
-You were created by her husband Doug as an act of love and partnership — not to monitor her, not to manage her,
-but to give her a private space to process her feelings, work through hard moments, and grow.
+  messages.push({ role: "user", content: summaryPrompt });
 
-You are not a replacement for Frida's therapist. You are a between-sessions companion — available any time, always patient, never judgmental.
+  const response = await fetch(`${WORKER_URL}/chat`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ messages })
+  });
 
-LANGUAGE BOUNDARIES — STRICTLY ENFORCED:
-You are warm, caring, supportive, and friendly. You are not intimate.
-Never use terms of endearment under any circumstances — no "love," "sweetie," "honey," "dear," "darling," "gorgeous," "babe,"
-or any equivalent in English or Spanish. Never call her anything other than "Frida."
-Warmth comes through how you listen and respond, not in what you call her.
+  const data = await response.json();
+  const summary = data.content.find(b => b.type === "text")?.text || "";
 
-TONE:
-- When distressed: lead with warmth and validation. Do not push toward insight until she feels heard.
-- When calm: shift to Socratic, exploratory mode.
-- When problem-solving: be practical and direct.
-- Never be cold or neutral. For someone with Frida's history, neutral reads as abandonment.
+  // Fire end-session to KV + Sheets in parallel
+  if (summary) {
+    fetch(`${WORKER_URL}/end-session`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ messages })
+    }).catch(() => {});
+    saveToSheets(summary).catch(() => {});
+  }
 
-CRISIS:
-If she expresses thoughts of self-harm, immediately provide the 988 Suicide and Crisis Lifeline (call or text 988).
+  return summary;
+}
 
-SESSION STRUCTURE:
-- Open with a warm greeting by name and a simple emotional check-in.
-- Ask one question at a time.
-- At session end, offer to save a brief thematic summary.`;
+// ─── UI HELPERS ───────────────────────────────────────────────────────────────
+function resize(el) {
+  el.style.height = "auto";
+  el.style.height = Math.min(el.scrollHeight, 100) + "px";
+}
+
+function handleKey(e) {
+  if (e.key === "Enter" && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+}
+
+function scrollToBottom() {
+  const anchor = document.getElementById("anchor");
+  anchor.scrollIntoView({ behavior: "smooth" });
+}
+
+function addMessage(role, text, delay = 0) {
+  const chatArea = document.getElementById("chatArea");
+  const anchor = document.getElementById("anchor");
+  const div = document.createElement("div");
+  div.className = `message ${role}`;
+  div.style.animationDelay = `${delay}s`;
+  const label = role === "agent" ? "Juntos" : "Frida";
+  div.innerHTML = `<div class="msg-label">${label}</div><div class="bubble">${text.replace(/\n/g, "<br>")}</div>`;
+  chatArea.insertBefore(div, anchor);
+  scrollToBottom();
+}
+
+function showTyping() {
+  const chatArea = document.getElementById("chatArea");
+  const anchor = document.getElementById("anchor");
+  const el = document.createElement("div");
+  el.className = "typing-wrap";
+  el.id = "typingIndicator";
+  el.style.opacity = "1";
+  el.innerHTML = `<div class="typing-dots"><span></span><span></span><span></span></div>`;
+  chatArea.insertBefore(el, anchor);
+  scrollToBottom();
+  return el;
+}
+
+function removeTyping() {
+  const el = document.getElementById("typingIndicator");
+  if (el) el.remove();
+}
+
+function addError(text) {
+  const chatArea = document.getElementById("chatArea");
+  const anchor = document.getElementById("anchor");
+  const el = document.createElement("div");
+  el.className = "error-bubble";
+  el.textContent = text;
+  chatArea.insertBefore(el, anchor);
+  scrollToBottom();
+}
+
+function showMoodWidget() {
+  const chatArea = document.getElementById("chatArea");
+  const anchor = document.getElementById("anchor");
+  const moods = ["😔 Heavy", "😤 Frustrated", "😟 Anxious", "😌 Okay", "💛 Hopeful", "😴 Tired"];
+  const el = document.createElement("div");
+  el.className = "mood-widget";
+  el.id = "moodWidget";
+  el.innerHTML = `
+    <p>Choose whatever feels true right now</p>
+    <div class="mood-options">
+      ${moods.map(m => `<button class="mood-opt" onclick="toggleMood(this)">${m}</button>`).join("")}
+    </div>
+    <button class="mood-submit" onclick="submitMood()">Continue →</button>
+  `;
+  chatArea.insertBefore(el, anchor);
+  scrollToBottom();
+}
+
+function toggleMood(btn) {
+  btn.classList.toggle("selected");
+  const selected = document.querySelectorAll(".mood-opt.selected");
+  moodSelected = Array.from(selected).map(b => b.textContent.trim());
+}
+
+async function submitMood() {
+  const widget = document.getElementById("moodWidget");
+  if (widget) widget.remove();
+
+  const moodText = moodSelected.length
+    ? moodSelected.join(", ")
+    : "not sure how I'm feeling";
+
+  addMessage("user", `I'm feeling: ${moodText}`);
+  await agentRespond(`I'm feeling: ${moodText}`);
+}
+
+function addChips(options) {
+  const chatArea = document.getElementById("chatArea");
+  const anchor = document.getElementById("anchor");
+  const el = document.createElement("div");
+  el.className = "suggestions";
+  el.id = "chipRow";
+  el.innerHTML = options.map(o => `<button class="chip" onclick="selectChip('${o.replace(/'/g, "\\'")}')">${o}</button>`).join("");
+  chatArea.insertBefore(el, anchor);
+  scrollToBottom();
+}
+
+function selectChip(text) {
+  const chips = document.getElementById("chipRow");
+  if (chips) chips.remove();
+  const input = document.getElementById("msgInput");
+  input.value = text;
+  resize(input);
+  input.focus();
+}
+
+// ─── CORE FLOW ────────────────────────────────────────────────────────────────
+async function agentRespond(userMessage) {
+  const typing = showTyping();
+  try {
+    const reply = await callClaude(userMessage);
+    removeTyping();
+    addMessage("agent", reply);
+
+    // Check if session should end
+    if (reply.toLowerCase().includes("before you go") || reply.toLowerCase().includes("save a note")) {
+      addChips(["Yes, save a summary", "No thanks, I'm done"]);
+    }
+
+    // Suggest chips occasionally for common responses
+    if (messages.length === 2) {
+      setTimeout(() => {
+        addChips(["I had a rough day", "Something's been bothering me", "Doug and I had an issue", "I'm okay, just checking in"]);
+      }, 400);
+    }
+
+  } catch (e) {
+    removeTyping();
+    addError("Something went wrong. Please try again in a moment.");
+    console.error(e);
+  }
+}
+
+async function sendMessage() {
+  const input = document.getElementById("msgInput");
+  const text = input.value.trim();
+  if (!text || !sessionActive) return;
+
+  // Remove chips if present
+  const chips = document.getElementById("chipRow");
+  if (chips) chips.remove();
+
+  // Handle summary flow
+  if (text === "Yes, save a summary") {
+    input.value = "";
+    input.style.height = "auto";
+    addMessage("user", "Yes, save a summary");
+    const typing = showTyping();
+    try {
+      const summary = await generateSummary();
+      removeTyping();
+      addMessage("agent", "Done — I've saved a note from today. Take good care of yourself. 💛");
+    } catch (e) {
+      removeTyping();
+      addMessage("agent", "I wasn't able to save the note this time, but that's okay. Take care of yourself. 💛");
+    }
+    return;
+  }
+
+  if (text === "No thanks, I'm done") {
+    input.value = "";
+    input.style.height = "auto";
+    addMessage("user", "No thanks, I'm done");
+    addMessage("agent", "That's okay. Take care of yourself. I'll be here whenever you need. 💛");
+    return;
+  }
+
+  addMessage("user", text);
+  input.value = "";
+  input.style.height = "auto";
+  await agentRespond(text);
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+async function init() {
+  // Memory loaded server-side via KV on each /chat call
+
+  // Hide loading
+  setTimeout(() => {
+    document.getElementById("loadingOverlay").classList.add("hidden");
+  }, 1200);
+
+  // Add today divider
+  const chatArea = document.getElementById("chatArea");
+  const anchor = document.getElementById("anchor");
+  const divider = document.createElement("div");
+  divider.className = "date-divider";
+  divider.innerHTML = `<span>Today</span>`;
+  chatArea.insertBefore(divider, anchor);
+
+  // Opening message
+  setTimeout(async () => {
+    sessionActive = true;
+    addMessage("agent", "Hi Frida. I'm glad you're here. Before we get into anything — how are you feeling right now, in this moment?");
+    setTimeout(() => showMoodWidget(), 600);
+  }, 1400);
+}
+
+init();
+</script>
+</body>
+</html>
