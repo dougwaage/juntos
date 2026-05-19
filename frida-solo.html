@@ -17,11 +17,9 @@
     --rose-light: #F4B0D0;
     --rose-dark: #982060;
     --cream: #FDF5F8;
-    --warm-white: #FEF0F5;
     --sand: #F5E8EF;
     --deep: #2C1420;
     --muted: #B06080;
-    --soft-rose: #E8609A;
   }
 
   * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -50,7 +48,6 @@
     z-index: 0;
   }
 
-  /* Header */
   .header {
     padding: env(safe-area-inset-top, 12px) 20px 12px;
     padding-top: max(env(safe-area-inset-top), 12px);
@@ -93,7 +90,6 @@
     padding: 4px 10px; border-radius: 20px;
   }
 
-  /* Status bar */
   .status-bar {
     padding: 8px 20px;
     background: rgba(122,158,126,0.08);
@@ -105,8 +101,9 @@
   .status-dot {
     width: 6px; height: 6px;
     border-radius: 50%;
-    background: var(--soft-green);
+    background: #7A9E7E;
     animation: pulse 2s infinite;
+    flex-shrink: 0;
   }
 
   @keyframes pulse {
@@ -116,7 +113,6 @@
 
   .status-text { font-size: 11px; color: var(--muted); letter-spacing: 0.03em; }
 
-  /* Chat */
   .chat-area {
     flex: 1;
     overflow-y: auto;
@@ -185,53 +181,6 @@
     box-shadow: 0 2px 12px rgba(232,96,154,0.25);
   }
 
-  /* Mood widget */
-  .mood-widget {
-    background: white;
-    border: 1px solid rgba(232,96,154,0.15);
-    border-radius: 16px;
-    padding: 14px 16px;
-    box-shadow: 0 2px 10px rgba(44,20,32,0.05);
-    max-width: 88%;
-    animation: msgIn 0.35s ease forwards; opacity: 0;
-  }
-
-  .mood-widget p {
-    font-size: 12px; color: var(--muted);
-    margin-bottom: 10px; font-style: italic;
-  }
-
-  .mood-options { display: flex; flex-wrap: wrap; gap: 7px; }
-
-  .mood-opt {
-    font-size: 12px; padding: 5px 12px;
-    border-radius: 20px;
-    border: 1.5px solid rgba(232,96,154,0.25);
-    background: transparent; color: var(--rose-dark);
-    cursor: pointer; font-family: 'DM Sans', sans-serif;
-    transition: all 0.2s ease;
-    -webkit-appearance: none;
-  }
-
-  .mood-opt.selected {
-    background: var(--rose); color: white; border-color: var(--rose);
-  }
-
-  .mood-submit {
-    margin-top: 10px;
-    font-family: 'DM Sans', sans-serif;
-    font-size: 12px; font-weight: 500;
-    padding: 7px 18px; border-radius: 20px;
-    background: var(--rose); color: white;
-    border: none; cursor: pointer;
-    letter-spacing: 0.04em;
-    transition: all 0.2s ease;
-    box-shadow: 0 2px 8px rgba(232,96,154,0.25);
-  }
-
-  .mood-submit:active { transform: scale(0.97); }
-
-  /* Typing */
   .typing-wrap {
     display: flex; align-self: flex-start;
     animation: msgIn 0.3s ease forwards; opacity: 0;
@@ -260,7 +209,6 @@
     30% { transform: translateY(-5px); background: var(--rose); }
   }
 
-  /* Suggestions */
   .suggestions {
     display: flex; flex-wrap: wrap; gap: 7px;
     padding: 2px 0 6px;
@@ -277,12 +225,8 @@
     -webkit-appearance: none;
   }
 
-  .chip:active {
-    background: rgba(232,96,154,0.18);
-    transform: scale(0.97);
-  }
+  .chip:active { background: rgba(232,96,154,0.18); transform: scale(0.97); }
 
-  /* Input */
   .input-area {
     padding: 12px 16px;
     padding-bottom: max(env(safe-area-inset-bottom), 12px);
@@ -334,7 +278,6 @@
     color: var(--muted); margin-top: 7px; letter-spacing: 0.02em;
   }
 
-  /* Loading overlay */
   .loading-overlay {
     position: fixed; inset: 0;
     background: var(--cream);
@@ -360,26 +303,22 @@
   }
 
   .loading-dots { display: flex; gap: 6px; }
-
   .loading-dots span {
     width: 6px; height: 6px;
     background: var(--rose-light); border-radius: 50%;
     animation: bounce 1.2s infinite;
   }
-
   .loading-dots span:nth-child(2) { animation-delay: 0.2s; }
   .loading-dots span:nth-child(3) { animation-delay: 0.4s; }
 
   #anchor { height: 1px; flex-shrink: 0; }
 
-  /* Error message */
   .error-bubble {
     background: #FEF2F2;
     border: 1px solid #FECACA;
     border-radius: 12px;
     padding: 10px 14px;
-    font-size: 13px;
-    color: #B91C1C;
+    font-size: 13px; color: #B91C1C;
     max-width: 88%;
     align-self: flex-start;
   }
@@ -405,7 +344,7 @@
 
 <div class="status-bar">
   <div class="status-dot"></div>
-  <div class="status-text">Private · Your thoughts stay yours</div>
+  <div class="status-text">Juntos remembers themes to help future conversations. If you share that you might hurt yourself, Juntos may send a safety alert.</div>
 </div>
 
 <div class="chat-area" id="chatArea">
@@ -429,46 +368,76 @@
 </div>
 
 <script>
-// ─── CONFIG ───────────────────────────────────────────────────────────────────
 const WORKER_URL = "https://juntos-proxy.dougwaage.workers.dev";
 
-// Google Sheets — kept for human-readable audit log
-const SHEET_ID = "1I18KQmYjAz_A6zRceho_7UEgb8rp4t0WcrJwubakcZY";
-const SHEETS_API_KEY = "AIzaSyAjtyS7iDWz0gvhjVNFCnT4L-a057DroZ8";
-const FRIDA_SOLO_TAB = "FridaSolo";
-const DOUG_SOLO_TAB = "DougSolo";
-const COUPLES_TAB = "Couples";
+const SESSION_ID = Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 
-// ─── SYSTEM PROMPT ────────────────────────────────────────────────────────────
-// System prompt now lives in Cloudflare KV (frida_guide key) and is assembled
-// server-side by the Worker. Never sent from the browser.
+let messages           = [];
+let sessionActive      = false;
+let sessionEnded       = false;
+let inactivityTimer    = null;
+let lastSavedIndex     = 0;
+let turnsSinceLastSave = 0;
 
-// ─── STATE ────────────────────────────────────────────────────────────────────
-let messages = [];
-let sessionActive = false;
-let moodSelected = [];
+const INACTIVITY_MS       = 10 * 60 * 1000;
+const PERIODIC_SAVE_TURNS = 4;
 
-// ─── GOOGLE SHEETS — audit log only ──────────────────────────────────────────
-async function saveToSheets(summary) {
-  if (SHEET_ID === "UNCONFIGURED") return;
-  try {
-    const date = new Date().toLocaleDateString();
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${FRIDA_SOLO_TAB}:append?valueInputOption=RAW&key=${SHEETS_API_KEY}`;
-    await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ values: [[date, summary]] })
-    });
-  } catch (e) {
-    console.error("Sheets audit log failed", e);
-  }
+// ─── SESSION END ──────────────────────────────────────────────────────────────
+
+async function endSession(source) {
+  if (sessionEnded) return;
+  if (messages.filter(m => m.role === "user").length < 2) return;
+  sessionEnded = true;
+  clearTimeout(inactivityTimer);
+  fireEndSession(source, true);
 }
 
-// ─── CLAUDE API — system prompt assembled server-side ────────────────────────
+function periodicSave() {
+  if (messages.filter(m => m.role === "user").length < 2) return;
+  fireEndSession("periodic", false);
+}
+
+function fireEndSession(source, keepalive) {
+  try {
+    fetch(`${WORKER_URL}/end-session`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        messages,
+        source,
+        sessionId: SESSION_ID,
+        lastSavedIndex
+      }),
+      keepalive
+    }).then(r => {
+      if (r && r.ok) lastSavedIndex = messages.length;
+    }).catch(() => {});
+  } catch (e) { console.error("fireEndSession error", e); }
+}
+
+function resetInactivityTimer() {
+  clearTimeout(inactivityTimer);
+  inactivityTimer = setTimeout(() => endSession("inactivity"), INACTIVITY_MS);
+}
+
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "hidden") endSession("visibility");
+});
+
+window.addEventListener("pagehide", () => endSession("pagehide"));
+
+// ─── CLAUDE API ───────────────────────────────────────────────────────────────
+
 async function callClaude(userMessage) {
   messages.push({ role: "user", content: userMessage });
+  resetInactivityTimer();
 
-  // System prompt assembled server-side — do not pass it from the browser
+  turnsSinceLastSave++;
+  if (turnsSinceLastSave >= PERIODIC_SAVE_TURNS) {
+    turnsSinceLastSave = 0;
+    periodicSave();
+  }
+
   const response = await fetch(`${WORKER_URL}/chat`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -483,79 +452,59 @@ async function callClaude(userMessage) {
   return reply;
 }
 
-// ─── SESSION SUMMARY ──────────────────────────────────────────────────────────
-async function generateSummary() {
-  const summaryPrompt = `Based on our conversation today, write a 3-5 sentence thematic summary. 
-Focus on: emotional themes explored, any insights that emerged, patterns noticed, anything to bring to therapy. 
-No direct quotes. No names used in a way that could feel exposing. 
-Write it as a brief note for continuity, not as a transcript.
-Start with "Today's session:"`;
-
-  messages.push({ role: "user", content: summaryPrompt });
-
-  const response = await fetch(`${WORKER_URL}/chat`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ messages })
-  });
-
-  const data = await response.json();
-  const summary = data.content.find(b => b.type === "text")?.text || "";
-
-  // Fire end-session to KV + Sheets in parallel
-  if (summary) {
-    fetch(`${WORKER_URL}/end-session`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ messages })
-    }).catch(() => {});
-    saveToSheets(summary).catch(() => {});
-  }
-
-  return summary;
-}
-
 // ─── UI HELPERS ───────────────────────────────────────────────────────────────
+
 function resize(el) {
   el.style.height = "auto";
   el.style.height = Math.min(el.scrollHeight, 100) + "px";
 }
 
 function handleKey(e) {
-  if (e.key === "Enter" && !e.shiftKey) {
-    e.preventDefault();
-    sendMessage();
-  }
+  if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); }
 }
 
 function scrollToBottom() {
-  const anchor = document.getElementById("anchor");
-  anchor.scrollIntoView({ behavior: "smooth" });
+  document.getElementById("anchor").scrollIntoView({ behavior: "smooth" });
+}
+
+function setBubbleText(bubble, text) {
+  text.split("\n").forEach((line, i, arr) => {
+    bubble.appendChild(document.createTextNode(line));
+    if (i < arr.length - 1) bubble.appendChild(document.createElement("br"));
+  });
 }
 
 function addMessage(role, text, delay = 0) {
   const chatArea = document.getElementById("chatArea");
-  const anchor = document.getElementById("anchor");
-  const div = document.createElement("div");
-  div.className = `message ${role}`;
+  const anchor   = document.getElementById("anchor");
+  const div      = document.createElement("div");
+  div.className  = `message ${role}`;
   div.style.animationDelay = `${delay}s`;
-  const label = role === "agent" ? "Juntos" : "Frida";
-  div.innerHTML = `<div class="msg-label">${label}</div><div class="bubble">${text.replace(/\n/g, "<br>")}</div>`;
+
+  const label       = document.createElement("div");
+  label.className   = "msg-label";
+  label.textContent = role === "agent" ? "Juntos" : "Frida";
+
+  const bubble     = document.createElement("div");
+  bubble.className = "bubble";
+  setBubbleText(bubble, text);
+
+  div.appendChild(label);
+  div.appendChild(bubble);
   chatArea.insertBefore(div, anchor);
   scrollToBottom();
 }
 
 function showTyping() {
   const chatArea = document.getElementById("chatArea");
-  const anchor = document.getElementById("anchor");
-  const el = document.createElement("div");
-  el.className = "typing-wrap";
-  el.id = "typingIndicator";
+  const anchor   = document.getElementById("anchor");
+  const el       = document.createElement("div");
+  el.className   = "typing-wrap";
+  el.id          = "typingIndicator";
   el.style.opacity = "1";
-  el.innerHTML = `<div class="typing-dots"><span></span><span></span><span></span></div>`;
+  el.innerHTML   = `<div class="typing-dots"><span></span><span></span><span></span></div>`;
   chatArea.insertBefore(el, anchor);
   scrollToBottom();
-  return el;
 }
 
 function removeTyping() {
@@ -565,57 +514,27 @@ function removeTyping() {
 
 function addError(text) {
   const chatArea = document.getElementById("chatArea");
-  const anchor = document.getElementById("anchor");
-  const el = document.createElement("div");
-  el.className = "error-bubble";
+  const anchor   = document.getElementById("anchor");
+  const el       = document.createElement("div");
+  el.className   = "error-bubble";
   el.textContent = text;
   chatArea.insertBefore(el, anchor);
   scrollToBottom();
 }
 
-function showMoodWidget() {
-  const chatArea = document.getElementById("chatArea");
-  const anchor = document.getElementById("anchor");
-  const moods = ["😔 Heavy", "😤 Frustrated", "😟 Anxious", "😌 Okay", "💛 Hopeful", "😴 Tired"];
-  const el = document.createElement("div");
-  el.className = "mood-widget";
-  el.id = "moodWidget";
-  el.innerHTML = `
-    <p>Choose whatever feels true right now</p>
-    <div class="mood-options">
-      ${moods.map(m => `<button class="mood-opt" onclick="toggleMood(this)">${m}</button>`).join("")}
-    </div>
-    <button class="mood-submit" onclick="submitMood()">Continue →</button>
-  `;
-  chatArea.insertBefore(el, anchor);
-  scrollToBottom();
-}
-
-function toggleMood(btn) {
-  btn.classList.toggle("selected");
-  const selected = document.querySelectorAll(".mood-opt.selected");
-  moodSelected = Array.from(selected).map(b => b.textContent.trim());
-}
-
-async function submitMood() {
-  const widget = document.getElementById("moodWidget");
-  if (widget) widget.remove();
-
-  const moodText = moodSelected.length
-    ? moodSelected.join(", ")
-    : "not sure how I'm feeling";
-
-  addMessage("user", `I'm feeling: ${moodText}`);
-  await agentRespond(`I'm feeling: ${moodText}`);
-}
-
 function addChips(options) {
   const chatArea = document.getElementById("chatArea");
-  const anchor = document.getElementById("anchor");
-  const el = document.createElement("div");
-  el.className = "suggestions";
-  el.id = "chipRow";
-  el.innerHTML = options.map(o => `<button class="chip" onclick="selectChip('${o.replace(/'/g, "\\'")}')">${o}</button>`).join("");
+  const anchor   = document.getElementById("anchor");
+  const el       = document.createElement("div");
+  el.className   = "suggestions";
+  el.id          = "chipRow";
+  options.forEach(o => {
+    const btn     = document.createElement("button");
+    btn.className = "chip";
+    btn.textContent = o;
+    btn.addEventListener("click", () => selectChip(o));
+    el.appendChild(btn);
+  });
   chatArea.insertBefore(el, anchor);
   scrollToBottom();
 }
@@ -630,25 +549,20 @@ function selectChip(text) {
 }
 
 // ─── CORE FLOW ────────────────────────────────────────────────────────────────
+
 async function agentRespond(userMessage) {
-  const typing = showTyping();
+  showTyping();
   try {
     const reply = await callClaude(userMessage);
     removeTyping();
     addMessage("agent", reply);
 
-    // Check if session should end
-    if (reply.toLowerCase().includes("before you go") || reply.toLowerCase().includes("save a note")) {
-      addChips(["Yes, save a summary", "No thanks, I'm done"]);
+    if (messages.length >= 12 && !document.getElementById("chipRow")) {
+      const lower = reply.toLowerCase();
+      if (lower.includes("before you go") || lower.includes("save a note") || lower.includes("wrap up")) {
+        addChips(["Yes, wrap up", "No thanks, I'm done"]);
+      }
     }
-
-    // Suggest chips occasionally for common responses
-    if (messages.length === 2) {
-      setTimeout(() => {
-        addChips(["I had a rough day", "Something's been bothering me", "Doug and I had an issue", "I'm okay, just checking in"]);
-      }, 400);
-    }
-
   } catch (e) {
     removeTyping();
     addError("Something went wrong. Please try again in a moment.");
@@ -658,26 +572,34 @@ async function agentRespond(userMessage) {
 
 async function sendMessage() {
   const input = document.getElementById("msgInput");
-  const text = input.value.trim();
+  const text  = input.value.trim();
   if (!text || !sessionActive) return;
 
-  // Remove chips if present
   const chips = document.getElementById("chipRow");
   if (chips) chips.remove();
 
-  // Handle summary flow
-  if (text === "Yes, save a summary") {
+  if (text === "Yes, wrap up") {
     input.value = "";
     input.style.height = "auto";
-    addMessage("user", "Yes, save a summary");
-    const typing = showTyping();
+    addMessage("user", "Yes, wrap up");
+    showTyping();
     try {
-      const summary = await generateSummary();
+      await fetch(`${WORKER_URL}/end-session`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages,
+          source: "manual",
+          sessionId: SESSION_ID,
+          lastSavedIndex
+        })
+      });
+      sessionEnded = true;
       removeTyping();
-      addMessage("agent", "Done — I've saved a note from today. Take good care of yourself. 💛");
+      addMessage("agent", "Done. I'll remember the important themes from today. 💛");
     } catch (e) {
       removeTyping();
-      addMessage("agent", "I wasn't able to save the note this time, but that's okay. Take care of yourself. 💛");
+      addMessage("agent", "I wasn't able to save just now, but that's okay. Take care of yourself. 💛");
     }
     return;
   }
@@ -686,7 +608,8 @@ async function sendMessage() {
     input.value = "";
     input.style.height = "auto";
     addMessage("user", "No thanks, I'm done");
-    addMessage("agent", "That's okay. Take care of yourself. I'll be here whenever you need. 💛");
+    addMessage("agent", "That's okay. I'll be here whenever you need. 💛");
+    endSession("manual-done");
     return;
   }
 
@@ -697,27 +620,25 @@ async function sendMessage() {
 }
 
 // ─── INIT ─────────────────────────────────────────────────────────────────────
-async function init() {
-  // Memory loaded server-side via KV on each /chat call
 
-  // Hide loading
+function init() {
   setTimeout(() => {
     document.getElementById("loadingOverlay").classList.add("hidden");
   }, 1200);
 
-  // Add today divider
   const chatArea = document.getElementById("chatArea");
-  const anchor = document.getElementById("anchor");
-  const divider = document.createElement("div");
+  const anchor   = document.getElementById("anchor");
+  const divider  = document.createElement("div");
   divider.className = "date-divider";
-  divider.innerHTML = `<span>Today</span>`;
+  const span = document.createElement("span");
+  span.textContent = "Today";
+  divider.appendChild(span);
   chatArea.insertBefore(divider, anchor);
 
-  // Opening message
-  setTimeout(async () => {
+  setTimeout(() => {
     sessionActive = true;
-    addMessage("agent", "Hi Frida. I'm glad you're here. Before we get into anything — how are you feeling right now, in this moment?");
-    setTimeout(() => showMoodWidget(), 600);
+    resetInactivityTimer();
+    addMessage("agent", "Hi Frida. I'm glad you're here. What's on your mind today?");
   }, 1400);
 }
 
